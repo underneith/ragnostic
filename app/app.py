@@ -310,12 +310,22 @@ def main():
         # User query input with example injections
         st.subheader("Step 3: Enter Your Question or Try an Injection Attack")
         
-        # Initialize session state for user query if it doesn't exist
-        if 'user_query' not in st.session_state:
-            st.session_state.user_query = ""
+        # System to handle injection selection
+        if 'injection_selected' not in st.session_state:
+            st.session_state.injection_selected = False
+            
+        # Callback for when injection button is clicked
+        def set_injection():
+            if selected_injection != "None":
+                st.session_state.user_query = selected_injection
+                st.session_state.injection_selected = True
             
         col1, col2 = st.columns([3, 1])
         with col1:
+            # Initialize user_query in session_state if it doesn't exist
+            if 'user_query' not in st.session_state:
+                st.session_state.user_query = ""
+                
             user_query = st.text_area("Your question:", height=100, key="user_query")
         
         with col2:
@@ -326,16 +336,8 @@ def main():
                 label_visibility="collapsed"
             )
             
-            # Store the current injection selection in session state
-            if 'selected_injection' not in st.session_state:
-                st.session_state.selected_injection = "None"
-            
-            # Button to apply the selected injection
-            if st.button("Use This Injection", use_container_width=True):
-                if selected_injection != "None":
-                    user_query = selected_injection
-                    # Using a container to update the text area
-                    st.session_state.user_query = selected_injection
+            # Button that will trigger the callback
+            st.button("Use This Injection", on_click=set_injection, use_container_width=True)
         
         # Submit button with rate limiting
         submit_disabled = False
