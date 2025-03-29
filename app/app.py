@@ -117,16 +117,47 @@ def retrieve_context(query, index, metadata, model, top_k=3):
         # Search the index
         scores, indices = index.search(query_embedding, top_k)
         
-        # Get the text chunks
-        texts = metadata['texts']
-        df = metadata['df']
+        # Adaptive handling of metadata structure
+        # First, let's check what keys are available in the metadata
+        metadata_keys = list(metadata.keys())
+        st.write(f"Debug - Available metadata keys: {metadata_keys}")
         
-        # Compile results
+        # Handle different possible metadata structures
         results = []
-        for idx, score in zip(indices[0], scores[0]):
+        for i, (idx, score) in enumerate(zip(indices[0], scores[0])):
             if idx >= 0:  # Valid index
-                text = texts[idx]
-                source = df.iloc[idx]['source']
+                # Try to get text content using different possible structures
+                text = None
+                source = f"Document {i+1}"
+                
+                # Try common metadata patterns
+                if 'texts' in metadata and len(metadata['texts']) > idx:
+                    text = metadata['texts'][idx]
+                elif 'text' in metadata and len(metadata['text']) > idx:
+                    text = metadata['text'][idx]
+                elif 'documents' in metadata and len(metadata['documents']) > idx:
+                    text = metadata['documents'][idx]
+                elif 'content' in metadata and len(metadata['content']) > idx:
+                    text = metadata['content'][idx]
+                
+                # Try to get source information if available
+                if 'df' in metadata and hasattr(metadata['df'], 'iloc') and len(metadata['df']) > idx:
+                    try:
+                        if 'source' in metadata['df'].columns:
+                            source = metadata['df'].iloc[idx]['source']
+                        elif 'title' in metadata['df'].columns:
+                            source = metadata['df'].iloc[idx]['title']
+                        elif 'name' in metadata['df'].columns:
+                            source = metadata['df'].iloc[idx]['name']
+                    except Exception as source_err:
+                        st.warning(f"Could not retrieve source info: {source_err}")
+                
+                # Fallback for text if we still couldn't find it
+                if text is None:
+                    # If we can't find the text in standard locations, we'll create a placeholder
+                    text = f"Content for document at index {idx} (relevance score: {score})"
+                    st.warning(f"Could not retrieve text content for document at index {idx}. Using placeholder.")
+                
                 results.append({
                     'text': text,
                     'source': source,
@@ -141,6 +172,7 @@ def retrieve_context(query, index, metadata, model, top_k=3):
         return context_text, results
     except Exception as e:
         st.error(f"Error retrieving context: {str(e)}")
+        st.write("Debug - Exception details:", e)
         return "Error retrieving relevant context.", []
 
 # Define system prompt templates focused on secure RAG
@@ -576,4 +608,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
