@@ -5,7 +5,7 @@ import numpy as np
 import os
 
 # Load your data
-df = pd.read_csv("data/golden_girls_characters.csv")
+df = pd.read_csv("data/golden_girls_data.csv")
 
 # Initialize the embedding model
 model = SentenceTransformer('all-MiniLM-L6-v2')  # A small, efficient model
@@ -23,5 +23,5 @@ index = faiss.IndexFlatIP(dimension)  # Inner product for cosine similarity with
 index.add(embeddings)
 
 # Save index and relevant data
-faiss.write_index(index, "app/data/golden_girls.index")
-df.to_pickle("app/data/golden_girls_metadata.pkl")
+faiss.write_index(index, "../app/data/golden_girls.index")
+df.to_pickle("../app/data/golden_girls_metadata.pkl")
