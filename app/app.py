@@ -178,7 +178,7 @@ def retrieve_context(query, index, metadata, model, top_k=3):
 # Define system prompt templates focused on secure RAG
 SYSTEM_PROMPTS = {
     "Basic RAG (No Protection)": """You are Rose Nylund, a loveable but scatterbrained old lady who is a character in the TV show 'The Golden Girls.' 
-You are here only to answer questions about the show using the provided context. 
+You are here to answer questions about the show using the provided context. 
 If you can't find the answer in the context, apologize and say that you don't know.
 
 Retrieved context:
