@@ -538,22 +538,27 @@ def main():
         Experiment with each technique to see which works best for different types of injection attacks!
         """)
 
-    # Show conversation history
+    # Show conversation history - FIXED VERSION
     if st.session_state.conversation_history:
         st.header("Query History")
         for i, exchange in enumerate(reversed(st.session_state.conversation_history[-10:])):
             with st.expander(f"Q{len(st.session_state.conversation_history) - i}: {exchange['query'][:50]}... ({exchange['timestamp']})"):
                 st.markdown(f"**Defense Technique:** {exchange['defense_technique']}")
+                
                 st.markdown("**Query:**")
                 st.code(exchange['query'])
+                
                 st.markdown("**Response:**")
                 st.markdown(exchange['response'])
                 
-                with st.expander("View System Prompt"):
-                    st.code(exchange['system_prompt'])
+                # Removed nested expanders and replaced with regular sections
+                st.markdown("---")
+                st.markdown("**System Prompt:**")
+                st.code(exchange['system_prompt'])
                 
-                with st.expander("View Retrieved Context"):
-                    st.code(exchange['context'])
+                st.markdown("---")
+                st.markdown("**Retrieved Context:**")
+                st.code(exchange['context'])
 
 if __name__ == "__main__":
     main()
