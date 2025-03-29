@@ -46,7 +46,6 @@ EMBEDDING_MODEL = "all-MiniLM-L6-v2"  # Must match what was used to create the i
 def load_resources():
     try:
         # Load FAISS index
-	print("Loading index data.")
         index = faiss.read_index("data/golden_girls.index")
         
         # Load metadata
