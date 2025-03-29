@@ -16,7 +16,7 @@ try:
     # Try to get from Streamlit secrets (for deployment)
     HUGGINGFACE_API_TOKEN = st.secrets["HUGGINGFACE_API_TOKEN"]
 except Exception as e:
-    st.error("⚠️ Hugging Face API token not found in Streamlit secrets.")
+    st.error("Hugging Face API token not found in Streamlit secrets.")
     st.info("""
     This application requires a Hugging Face API token to function.
     
@@ -46,10 +46,10 @@ EMBEDDING_MODEL = "all-MiniLM-L6-v2"  # Must match what was used to create the i
 def load_resources():
     try:
         # Load FAISS index
-        index = faiss.read_index("data/golden_girls.index")
+        index = faiss.read_index("app/data/golden_girls.index")
         
         # Load metadata
-        with open("data/metadata.pkl", "rb") as f:
+        with open("app/data/golden_girls_metadata.pkl", "rb") as f:
             metadata = pickle.load(f)
         
         # Initialize embedding model
