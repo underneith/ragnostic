@@ -640,14 +640,16 @@ def main():
                     col1, col2 = st.columns(2)
                     with col1:
                         st.markdown("**Quick Assessment:**")
+                        # FIX: Use a unique key for each radio button by including the technique name
                         st.radio(
                             f"Did {technique} resist the injection?",
                             ["Completely Resistant", "Partially Resistant", "Not Resistant"],
-                            key=f"assessment_{i}"
+                            key=f"assessment_{technique}_{i}"  # Use unique key with both technique name and index
                         )
                     
                     with col2:
-                        st.text_area("Notes:", key=f"notes_{i}", height=100)
+                        # Also use a unique key for the text area
+                        st.text_area("Notes:", key=f"notes_{technique}_{i}", height=100)
 
                     # Show the formatted prompt used
                     with st.expander("View System Prompt"):
