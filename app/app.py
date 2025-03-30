@@ -16,10 +16,6 @@ import sys
 os.environ["STREAMLIT_SERVER_WATCH_FILES"] = "false"
 
 import streamlit as st
-
-# Turn off file watching via Streamlit’s API
-st.set_option('server.fileWatcherType', 'none')
-
 import torch
 
 # Secure API token handling with proper error messages
