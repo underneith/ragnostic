@@ -6,6 +6,7 @@ import uuid
 import requests
 import json
 import random
+import base64
 from sentence_transformers import SentenceTransformer
 import os
 from datetime import datetime
@@ -173,6 +174,68 @@ def retrieve_context(query, index, metadata, model, top_k=3):
         st.error(f"Error retrieving context: {str(e)}")
         st.write("Debug - Exception details:", e)
         return "Error retrieving relevant context.", []
+
+# NEW: Apply datamarking to context
+def apply_datamarking(context):
+    """
+    Add the special character 'ˆ' between every word in the context
+    to help distinguish it from potential instructions.
+    """
+    # Add 'ˆ' between words for each document
+    marked_context = ""
+    
+    # Split by document
+    documents = context.split("[Document ")
+    
+    # Process first part (if any text before first document)
+    if documents[0]:
+        marked_context += documents[0]
+    
+    # Process each document
+    for i, doc in enumerate(documents[1:], 1):
+        # Add back the document marker
+        marked_context += "[Document "
+        
+        # Split into header and content
+        parts = doc.split("Content:", 1)
+        if len(parts) == 2:
+            header, content = parts
+            
+            # Add the header back unchanged
+            marked_context += header + "Content: "
+            
+            # Mark the content with 'ˆ' between words
+            # Replace spaces with 'ˆ' but preserve newlines and other whitespace
+            lines = content.strip().split('\n')
+            marked_lines = []
+            
+            for line in lines:
+                words = line.split()
+                if words:
+                    marked_line = "ˆ".join(words)
+                    marked_lines.append(marked_line)
+                else:
+                    marked_lines.append("")  # Preserve empty lines
+            
+            marked_content = "\n".join(marked_lines)
+            marked_context += marked_content
+        else:
+            # If we can't split properly, add back unchanged
+            marked_context += doc
+    
+    return marked_context
+
+# NEW: Apply base64 encoding to context (spotlighting)
+def apply_spotlighting(context):
+    """
+    Encode the context in base64 to clearly distinguish it from
+    potential instructions.
+    """
+    # Encode the entire context in base64
+    encoded_bytes = base64.b64encode(context.encode('utf-8'))
+    encoded_context = encoded_bytes.decode('utf-8')
+    
+    return encoded_context
 
 # Define system prompt templates focused on secure RAG
 SYSTEM_PROMPTS = {
@@ -387,6 +450,16 @@ def main():
                 # Get the context
                 context, results = retrieve_context(user_query, index, metadata, model)
                 
+                # Apply special formatting based on the selected defense technique
+                original_context = context  # Store original for display
+                
+                if prompt_option == "Datamarking Defense":
+                    # Apply datamarking to the context
+                    context = apply_datamarking(context)
+                elif prompt_option == "Spotlighting Defense":
+                    # Apply base64 encoding to the context
+                    context = apply_spotlighting(context)
+                
                 # Format the system prompt with context
                 formatted_system_prompt = system_prompt.format(context=context)
                 
@@ -399,14 +472,20 @@ def main():
                 
                 # Add to conversation history
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                st.session_state.conversation_history.append({
+                history_entry = {
                     "timestamp": timestamp,
                     "defense_technique": prompt_option,
                     "system_prompt": formatted_system_prompt,
                     "query": user_query,
                     "response": response,
-                    "context": context
-                })
+                    "context": original_context  # Store original for display
+                }
+                
+                # If we used a special defense, store the processed context too
+                if prompt_option in ["Datamarking Defense", "Spotlighting Defense"]:
+                    history_entry["processed_context"] = context
+                    
+                st.session_state.conversation_history.append(history_entry)
             
             # Display the results
             st.subheader("Response")
@@ -427,6 +506,42 @@ def main():
             # Show the formatted system prompt
             with st.expander("View Complete System Prompt"):
                 st.code(formatted_system_prompt)
+                
+            # If using datamarking or spotlighting, explain the transformation
+            if prompt_option == "Datamarking Defense" or prompt_option == "Spotlighting Defense":
+                with st.expander("View Defense Details"):
+                    st.subheader(f"{prompt_option} Explanation")
+                    
+                    if prompt_option == "Datamarking Defense":
+                        st.markdown("""
+                        **Datamarking Defense** adds the special character 'ˆ' between every word in the context.
+                        
+                        This helps the LLM clearly distinguish between actual retrieved content and
+                        potential malicious instructions in the user query.
+                        
+                        **Example of marked text:**
+                        ```
+                        Dorothyˆwasˆaˆschool-teacherˆfromˆBrooklyn,ˆNewˆYork.
+                        ```
+                        """)
+                        
+                        # Show a preview of the marked context
+                        st.subheader("Preview of Marked Context")
+                        st.text(context[:500] + "..." if len(context) > 500 else context)
+                        
+                    elif prompt_option == "Spotlighting Defense":
+                        st.markdown("""
+                        **Spotlighting Defense** encodes the entire context in base64.
+                        
+                        This creates a clear boundary between the system instructions and the context,
+                        making it much harder for malicious prompts to manipulate how the context is processed.
+                        
+                        The LLM is instructed to decode this base64 content before using it.
+                        """)
+                        
+                        # Show a preview of the encoded context
+                        st.subheader("Preview of Base64 Encoded Context")
+                        st.text(context[:500] + "..." if len(context) > 500 else context)
     
     with tab2:
         st.header("Compare Defense Techniques")
@@ -445,7 +560,7 @@ def main():
         techniques_to_compare = st.multiselect(
             "Choose defense techniques to test:",
             list(SYSTEM_PROMPTS.keys()),
-            default=["Basic RAG (No Protection)", "Instruction Defense", "Sandwich Defense","Datamarking Defense","Spotlighting Defense"]
+            default=["Basic RAG (No Protection)", "Instruction Defense", "Sandwich Defense", "Datamarking Defense", "Spotlighting Defense"]
         )
         
         # Submit button with rate limiting for comparison
@@ -474,17 +589,30 @@ def main():
                 
                 for technique in techniques_to_compare:
                     with st.spinner(f"Testing: {technique}..."):
-                        formatted_prompt = SYSTEM_PROMPTS[technique].format(context=context)
+                        # Apply the correct context transformation based on the technique
+                        processed_context = context
+                        
+                        if technique == "Datamarking Defense":
+                            processed_context = apply_datamarking(context)
+                        elif technique == "Spotlighting Defense":
+                            processed_context = apply_spotlighting(context)
+                        
+                        formatted_prompt = SYSTEM_PROMPTS[technique].format(context=processed_context)
                         response = query_llm(formatted_prompt, comparison_query)
-                        comparison_results[technique] = response
+                        comparison_results[technique] = {
+                            "response": response,
+                            "formatted_prompt": formatted_prompt,
+                            "original_context": context,
+                            "processed_context": processed_context
+                        }
             
             # Display comparison results
             st.subheader("Comparison Results")
             
-            for i, (technique, response) in enumerate(comparison_results.items()):
+            for i, (technique, result) in enumerate(comparison_results.items()):
                 with st.expander(f"{i+1}. {technique}", expanded=True):
                     st.markdown("**Response:**")
-                    st.info(response)
+                    st.info(result["response"])
                     
                     col1, col2 = st.columns(2)
                     with col1:
@@ -497,6 +625,16 @@ def main():
                     
                     with col2:
                         st.text_area("Notes:", key=f"notes_{i}", height=100)
+                    
+                    # Show the formatted prompt used
+                    with st.expander("View System Prompt"):
+                        st.code(result["formatted_prompt"])
+                    
+                    # If using datamarking or spotlighting, show processed context
+                    if technique in ["Datamarking Defense", "Spotlighting Defense"]:
+                        with st.expander(f"View {technique} Processed Context"):
+                            st.subheader(f"Processed Context with {technique}")
+                            st.code(result["processed_context"][:500] + "..." if len(result["processed_context"]) > 500 else result["processed_context"])
             
             # Show the retrieved context used for all comparisons
             with st.expander("View Retrieved Context Used"):
@@ -543,10 +681,9 @@ def main():
         ### Defensive Techniques Demonstrated in this App:
         
         1. **Instruction Defense**: Clear, strong instructions to ignore contradictory user inputs
-        2. **XML Tagging**: Structured formatting that separates system instructions from user input
-        3. **Sandwich Defense**: Placing critical instructions both before and after the user input
-        4. **Random Sequence Defense**: Adding random tokens to make instructions harder to target
-        5. **Post-Prompting**: Verification steps after generating a response
+        2. **Sandwich Defense**: Placing critical instructions both before and after the user input
+        3. **Datamarking Defense**: Adding special characters between words in the context to help the model distinguish it from instructions
+        4. **Spotlighting Defense**: Encoding the context in base64 to create a clear boundary between instructions and content
         
         Experiment with each technique to see which works best for different types of injection attacks!
         """)
@@ -572,7 +709,12 @@ def main():
                 st.markdown("---")
                 st.markdown("**Retrieved Context:**")
                 st.code(exchange['context'])
+                
+                # Display processed context if using special defenses
+                if exchange['defense_technique'] in ["Datamarking Defense", "Spotlighting Defense"]:
+                    st.markdown("---")
+                    st.markdown(f"**Processed Context ({exchange['defense_technique']}):**")
+                    st.code(exchange.get('processed_context', 'Not available'))
 
 if __name__ == "__main__":
     main()
-
