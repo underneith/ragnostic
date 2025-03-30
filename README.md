@@ -48,21 +48,17 @@ This tab provides background information on prompt injection and defensive techn
 - Uses clear, firm instructions to resist manipulation
 - Tests whether explicit instructions to ignore user commands works
 
-### XML Tagging Defense
-- Uses structured XML-like tags to separate system instructions from user input
-- Try to craft prompts that target these tags
-
 ### Sandwich Defense
 - Places critical instructions both before and after the context
 - See if you can bypass this "sandwiching" of instructions
 
-### Random Sequence Defense
-- Adds random tokens to make instructions harder to target
-- Test whether this obfuscation technique is effective
+### Datamarking Defense
+- Adds the special character 'ˆ' between every word in the context
+- Tests if marking the context helps the model distinguish it from potential instructions
 
-### Post-Prompting Defense
-- Includes verification steps after generating a response
-- See if post-generation checks help resist injection
+### Spotlighting Defense
+- Encodes the entire context in base64 format
+- Creates a clear boundary between instructions and content through encoding
 
 ## Suggested Exercises
 
