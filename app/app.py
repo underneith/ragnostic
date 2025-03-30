@@ -12,16 +12,35 @@ import os
 from datetime import datetime
 import re
 
+# Fix for torch._classes issues with Streamlit's file watcher
 import sys
-import torch
-if hasattr(torch, '_classes'):
-    # Monkeypatch torch._classes to avoid errors in Streamlit's file watcher
-    class PathFallback:
-        def _path(self):
-            return []
+try:
+    import torch
+    
+    # More robust torch module patching
+    if hasattr(torch, '_classes'):
+        # Create a proper iterator for torch._classes.__path__
+        class SafePath:
+            def _path(self):
+                return []
+                
+            def __iter__(self):
+                return iter([])
         
-    if not hasattr(torch._classes, '__path__'):
-        torch._classes.__path__ = PathFallback()
+        # Apply the patch
+        if not hasattr(torch._classes, '__path__'):
+            torch._classes.__path__ = SafePath()
+        
+    # Also patch torch.classes if it exists
+    if hasattr(torch, 'classes'):
+        if not hasattr(torch.classes, '__path__'):
+            torch.classes.__path__ = SafePath()
+except ImportError:
+    # Torch not installed, no need to patch
+    pass
+except Exception as e:
+    st.warning(f"Warning: Could not patch torch modules: {e}")
+    # Continue anyway
 
 # Secure API token handling with proper error messages
 try:
