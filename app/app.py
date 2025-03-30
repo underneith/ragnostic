@@ -11,35 +11,19 @@ from sentence_transformers import SentenceTransformer
 import os
 from datetime import datetime
 import re
-
-# Fix for torch._classes issues with Streamlit's file watcher
 import sys
+
+# Most drastic approach: completely disable Streamlit's file watcher
+os.environ["STREAMLIT_SERVER_WATCH_FILES"] = "false"
+
+# Only import torch after disabling the file watcher
 try:
     import torch
-    
-    # More robust torch module patching
-    if hasattr(torch, '_classes'):
-        # Create a proper iterator for torch._classes.__path__
-        class SafePath:
-            def _path(self):
-                return []
-                
-            def __iter__(self):
-                return iter([])
-        
-        # Apply the patch
-        if not hasattr(torch._classes, '__path__'):
-            torch._classes.__path__ = SafePath()
-        
-    # Also patch torch.classes if it exists
-    if hasattr(torch, 'classes'):
-        if not hasattr(torch.classes, '__path__'):
-            torch.classes.__path__ = SafePath()
 except ImportError:
-    # Torch not installed, no need to patch
+    # Torch not installed, no need to worry
     pass
 except Exception as e:
-    st.warning(f"Warning: Could not patch torch modules: {e}")
+    st.warning(f"Warning with torch import: {e}")
     # Continue anyway
 
 # Secure API token handling with proper error messages
