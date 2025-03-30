@@ -445,7 +445,7 @@ def main():
         techniques_to_compare = st.multiselect(
             "Choose defense techniques to test:",
             list(SYSTEM_PROMPTS.keys()),
-            default=["Basic RAG (No Protection)", "Instruction Defense", "XML Tagging Defense"]
+            default=["Basic RAG (No Protection)", "Instruction Defense", "Sandwich Defense","Datamarking Defense","Spotlighting Defense"]
         )
         
         # Submit button with rate limiting for comparison
