@@ -21,12 +21,6 @@ import streamlit as st
 st.set_option('server.fileWatcherType', 'none')
 
 import torch
-except ImportError:
-    # Torch not installed, no need to worry
-    pass
-except Exception as e:
-    st.warning(f"Warning with torch import: {e}")
-    # Continue anyway
 
 # Secure API token handling with proper error messages
 try:
