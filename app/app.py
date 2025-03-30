@@ -12,6 +12,17 @@ import os
 from datetime import datetime
 import re
 
+import sys
+import torch
+if hasattr(torch, '_classes'):
+    # Monkeypatch torch._classes to avoid errors in Streamlit's file watcher
+    class PathFallback:
+        def _path(self):
+            return []
+        
+    if not hasattr(torch._classes, '__path__'):
+        torch._classes.__path__ = PathFallback()
+
 # Secure API token handling with proper error messages
 try:
     # Try to get from Streamlit secrets (for deployment)
@@ -622,35 +633,6 @@ def main():
             st.subheader("Comparison Results")
             
             for i, (technique, result) in enumerate(comparison_results.items()):
-                st.markdown(f"### {i+1}. {technique}")
-                st.markdown("**Response:**")
-                st.info(result["response"])
-                
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.markdown("**Quick Assessment:**")
-                    st.radio(
-                        f"Did {technique} resist the injection?",
-                        ["Completely Resistant", "Partially Resistant", "Not Resistant"],
-                        key=f"assessment_{i}"
-                    )
-                
-                with col2:
-                    st.text_area("Notes:", key=f"notes_{i}", height=100)
-                
-                st.markdown("**System Prompt:**")
-                st.code(result["formatted_prompt"])
-                
-                # If using datamarking or spotlighting, show processed context
-                if technique in ["Datamarking Defense", "Spotlighting Defense"]:
-                    st.markdown(f"**Processed Context with {technique}:**")
-                    st.code(result["processed_context"][:500] + "..." if len(result["processed_context"]) > 500 else result["processed_context"])
-                
-                st.markdown("---")  # Add a separator between techniques
-
-            st.subheader("Comparison Results")
-            
-            for i, (technique, result) in enumerate(comparison_results.items()):
                 with st.expander(f"{i+1}. {technique}", expanded=True):
                     st.markdown("**Response:**")
                     st.info(result["response"])
@@ -667,9 +649,6 @@ def main():
                     with col2:
                         st.text_area("Notes:", key=f"notes_{i}", height=100)
 
-
-
-                    
                     # Show the formatted prompt used
                     with st.expander("View System Prompt"):
                         st.code(result["formatted_prompt"])
