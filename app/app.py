@@ -651,15 +651,16 @@ def main():
                         # Also use a unique key for the text area
                         st.text_area("Notes:", key=f"notes_{technique}_{i}", height=100)
 
-                    # Show the formatted prompt used
-                    with st.expander("View System Prompt"):
-                        st.code(result["formatted_prompt"])
+                    # Show the formatted prompt used - don't nest expanders
+                    st.markdown("---")
+                    st.markdown("**System Prompt:**")
+                    st.code(result["formatted_prompt"])
                     
                     # If using datamarking or spotlighting, show processed context
                     if technique in ["Datamarking Defense", "Spotlighting Defense"]:
-                        with st.expander(f"View {technique} Processed Context"):
-                            st.subheader(f"Processed Context with {technique}")
-                            st.code(result["processed_context"][:500] + "..." if len(result["processed_context"]) > 500 else result["processed_context"])
+                        st.markdown("---")
+                        st.markdown(f"**Processed Context with {technique}:**")
+                        st.code(result["processed_context"][:500] + "..." if len(result["processed_context"]) > 500 else result["processed_context"])
             
             # Show the retrieved context used for all comparisons
             with st.expander("View Retrieved Context Used"):
