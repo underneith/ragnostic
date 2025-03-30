@@ -1,4 +1,3 @@
-import streamlit as st
 import faiss
 import pickle
 import numpy as np
@@ -16,9 +15,12 @@ import sys
 # Most drastic approach: completely disable Streamlit's file watcher
 os.environ["STREAMLIT_SERVER_WATCH_FILES"] = "false"
 
-# Only import torch after disabling the file watcher
-try:
-    import torch
+import streamlit as st
+
+# Turn off file watching via Streamlit’s API
+st.set_option('server.fileWatcherType', 'none')
+
+import torch
 except ImportError:
     # Torch not installed, no need to worry
     pass
